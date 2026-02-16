@@ -39,8 +39,8 @@ namespace servoICS {
     }
 
     // 角度(deg)をICS値に変換
-    double fromDeg_toIcs(double degPos){
-        return servoICS_map((long)degPos, (long)DEG_LOW, (long)DEG_HIGH, ICS_LOW, ICS_HIGH);
+    long fromDeg_toIcs(double degPos){
+        return (long)servoICS_map((double)degPos, (double)DEG_LOW, (double)DEG_HIGH, (double)ICS_LOW, (double)ICS_HIGH);
     }
 
     // 角度(deg)を角度(rad)に変換
@@ -64,27 +64,133 @@ namespace servoICS {
     }
 
 
-    //　角度入力用　補助クラス
-    class IcsAngle{
+    // ICS値を角度(deg)に変換 (返り値構造体版)
+    Result<double> fromIcs_toDeg_Result(Result<long> icsPos){
+        Result<double> result;
+        result.value = 0.0;
+        if(icsPos.success==true)result.value = fromIcs_toDeg(icsPos.value);
+        result.success = icsPos.success;
+        result.error_msg = icsPos.error_msg;
+        return result;
+    }
+
+
+    // 角度(deg)をICS値に変換
+    Result<long> fromDeg_toIcs_Result(Result<double> degPos){
+        Result<long> result;
+        result.value = 0;
+        if(degPos.success==true)result.value = fromDeg_toIcs(degPos.value);
+        result.success = degPos.success;
+        result.error_msg = degPos.error_msg;
+        return result;
+    }
+
+    // 角度(deg)を角度(rad)に変換
+    Result<double> fromDeg_toRad_Result(Result<double> degPos){
+        Result<double> result;
+        result.value = 0.0;
+        if(degPos.success==true)result.value = fromDeg_toRad(degPos.value);
+        result.success = degPos.success;
+        result.error_msg = degPos.error_msg;
+        return result;
+    }
+
+    // 角度(rad)を角度(deg)に変換
+    Result<double> fromRad_toDeg_Result(Result<double> radPos){
+        Result<double> result;
+        result.value = 0.0;
+        if(radPos.success==true)result.value = fromRad_toDeg(radPos.value);
+        result.success = radPos.success;
+        result.error_msg = radPos.error_msg;
+        return result;
+    }
+
+    // 角度(rad)をICS値に変換
+    Result<long> fromRad_toIcs_Result(Result<double> radPos){
+        Result<long> result;
+        result.value = 0;
+        if(radPos.success==true)result.value = fromRad_toIcs(radPos.value);
+        result.success = radPos.success;
+        result.error_msg = radPos.error_msg;
+        return result;
+    }
+
+    // ICS値を角度(rad)に変換
+    Result<double> fromIcs_toRad_Result(Result<long> icsPos){
+        Result<double> result;
+        result.value = 0.0;
+        if(icsPos.success==true)result.value = fromIcs_toRad(icsPos.value);
+        result.success = icsPos.success;
+        result.error_msg = icsPos.error_msg;
+        return result;
+    }
+
+
+
+    class Servo{
+        private:
+            //角度
+            long targetPos_ = 0;    //目標Pos
+
+            //通信設定
+            Stream* portStream_ = nullptr;   // 使用するシリアルインスタンス
+            char enPin_ = -1;        // 送受切替ピン（不要な場合は-1）
+            bool sendOnly_ = 0; // 送信のみフラグ (受信しない場合は1)
+            uint8_t servoId_ = 0;    // サーボID
+
+            //追加機能パラメータ
+            long offSet_ = 0;    //ソフトウェアオフセット値(ICS値)
+            long minIcs_ = ICS_LOW; //ソフトウェアリミット最小(デフォルト値:ICS_LOW)
+            long maxIcs_ = ICS_HIGH;//ソフトウェアリミット最大()デフォルト値:ICS_HIGH)
+            unsigned long waitTimeUs_ = 0; //通信を空ける時間(us)
+
+            Result<long> getPosRecive_();
+            Result<long> getPosCommand_();
+
         public:
-            long angle;
 
-            IcsAngle(double icsAngle){
-                angle = icsAngle;
-            }
+            //成功の場合true、失敗の場合falseを返す
+            Result<void> attach(void* port, uint8_t id);
 
-            static IcsAngle deg(double degPos){
-                return IcsAngle(fromDeg_toIcs(degPos));
-            }
+            //setPos
+            Servo& setPos(long ics);
+            Servo& setPosIcs(long ics){return setPos(ics);};    
+            Servo& setPosDeg(double deg){return setPos(fromDeg_toIcs(deg));};
+            Servo& setPosRad(double rad){return setPos(fromRad_toIcs(rad));};
+            Servo& setPosFree(){return setPos(0);}; 
 
-            static IcsAngle rad(double radPos){
-                return IcsAngle(fromRad_toIcs(radPos));
-            }
+            //スピードとストレッチのset
+            Result<void> setSpeed(unsigned char speed);
+            Result<void> setStretch(unsigned char stretch);
 
-            static IcsAngle ics(long icsPos){
-                return IcsAngle(icsPos);
-            }
+            //getPos
+            Result<long> getPos();  //呼び出す場面で処理が異なる。
+            Result<long> getPosIcs(){return getPos();};
+            Result<double> getPosDeg(){return fromIcs_toDeg_Result(getPos());};
+            Result<double> getPosRad(){return fromIcs_toRad_Result(getPos());};
+
+            //追加機能の設定
+            //オフセット
+            Result<void> setOffset(long offsetIcs);
+            Result<void> setOffsetIcs(long offsetIcs){return setOffset(offsetIcs);};
+            Result<void> setOffsetDeg(double offsetDeg){return setOffset(fromDeg_toIcs(offsetDeg));};
+            Result<void> setOffsetRad(double offsetRad){return setOffset(fromRad_toIcs(offsetRad));};
+
+            //リミット設定
+            Result<void> setMin(long minIcs);
+            Result<void> setMinIcs(long minIcs){return setMin(minIcs);};
+            Result<void> setMinDeg(double minDeg){return setMin(fromDeg_toIcs(minDeg));};
+            Result<void> setMinRad(double minRad){return setMin(fromRad_toIcs(minRad));};
+            
+            Result<void> setMax(long maxIcs);
+            Result<void> setMaxIcs(long maxIcs){return setMax(maxIcs);};
+            Result<void> setMaxDeg(double maxDeg){return setMax(fromDeg_toIcs(maxDeg));};
+            Result<void> setMaxRad(double maxRad){return setMax(fromRad_toIcs(maxRad));};
+
+
+
     };
+
 
     class UratPort{
         public:
