@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (C) 2025 MinteIiaShip
 
-#include "servoICS.h"
+
+#include <Arduino.h>
+#include <type_traits>
+
 
 namespace servoICS {
 
@@ -11,61 +14,104 @@ namespace servoICS {
     const double DEG_LOW  = -135.0;   // ICS対応角度最小値
     const double DEG_HIGH = 135.0;    // ICS対応角度最大値
 
+    const int ICS_MAX_SPEED = 127;
+    const int ICS_MIN_SPEED = 1;
+
+    const int ICS_MAX_STRETCH = 127;
+    const int ICS_MIN_STRETCH = 1;
+
     template<typename servoICS_T>
     servoICS_T servoICS_map(servoICS_T value, servoICS_T fromLow, servoICS_T fromHigh, servoICS_T toLow, servoICS_T toHigh) {
         servoICS_T inRange = fromHigh - fromLow;
         servoICS_T outRange = toHigh - toLow;
         return ((value - fromLow) * outRange) / inRange  + toLow;
     }
-
-    // 汎用的なエラー対策強化　返り値用構造体
+    // 1. 汎用版（プライマリテンプレート）を先に定義
     template<typename servoICS_U>
-    struct Result{
+    struct Result {
         bool success;
-        const char* error_msg = "";
-        servoICS_U  value;
+        const char* error_msg;
+        servoICS_U value;
+
+        inline bool s() const { return success; }
+        inline const char* m() const { return error_msg; }
+        inline servoICS_U v() const { return value; }
+
+        Result() : success(false), error_msg(""), value(servoICS_U{}) {}
+
+        template<typename servoICS_U_2>
+        void assign_value(const Result<servoICS_U_2>& other, std::false_type) {
+            value = static_cast<servoICS_U>(other.value);
+        }
+
+        template<typename servoICS_U_2>
+        void assign_value(const Result<servoICS_U_2>& other, std::true_type) {
+            value = static_cast<servoICS_U>(0);
+        }
+
+        // 汎用変換コンストラクタ
+        template<typename servoICS_U_2>
+        Result(const Result<servoICS_U_2>& other) : success(other.success), error_msg(other.error_msg)
+        {
+            assign_value(other, std::is_void<servoICS_U_2>());
+        }
+
+        operator servoICS_U() const {
+            return value;
+        }
     };
 
-    // 成否のみを扱う特殊化
+    // 2. void 用の特殊化を後に定義
     template<>
-    struct Result<void>{
+    struct Result<void> {
         bool success;
-        const char* error_msg = "";
+        const char* error_msg;
+
+        inline bool s() const { return success; }
+        inline const char* m() const { return error_msg; }
+
+        Result() : success(false), error_msg("") {}
+
+        // 他の型から void への変換（値を捨てる）
+        template<typename servoICS_Z>
+        Result(const Result<servoICS_Z>& other) 
+            : success(other.success), 
+            error_msg(other.error_msg) {}
     };
 
     // ICS値を角度(deg)に変換
-    double fromIcs_toDeg(long icsPos){
+    inline double fromIcs_toDeg(long icsPos){
         return servoICS_map((double)icsPos, (double)ICS_LOW, (double)ICS_HIGH, DEG_LOW, DEG_HIGH);
     }
 
     // 角度(deg)をICS値に変換
-    long fromDeg_toIcs(double degPos){
+    inline long fromDeg_toIcs(double degPos){
         return (long)servoICS_map((double)degPos, (double)DEG_LOW, (double)DEG_HIGH, (double)ICS_LOW, (double)ICS_HIGH);
     }
 
     // 角度(deg)を角度(rad)に変換
-    double fromDeg_toRad(double degPos){
+    inline double fromDeg_toRad(double degPos){
         return degPos * (3.14159265358979323846 / 180.0);
     }
 
     // 角度(rad)を角度(deg)に変換
-    double fromRad_toDeg(double radPos){
+    inline double fromRad_toDeg(double radPos){
         return radPos * (180.0 / 3.14159265358979323846);
     }
 
     // 角度(rad)をICS値に変換
-    double fromRad_toIcs(double radPos){
+    inline double fromRad_toIcs(double radPos){
         return fromDeg_toIcs(fromRad_toDeg(radPos));
     }
 
     // ICS値を角度(rad)に変換
-    double fromIcs_toRad(long icsPos){
+    inline double fromIcs_toRad(long icsPos){
         return fromDeg_toRad(fromIcs_toDeg(icsPos));
     }
 
 
     // ICS値を角度(deg)に変換 (返り値構造体版)
-    Result<double> fromIcs_toDeg_Result(Result<long> icsPos){
+    inline Result<double> fromIcs_toDeg_Result(Result<long> icsPos){
         Result<double> result;
         result.value = 0.0;
         if(icsPos.success==true)result.value = fromIcs_toDeg(icsPos.value);
@@ -76,7 +122,7 @@ namespace servoICS {
 
 
     // 角度(deg)をICS値に変換
-    Result<long> fromDeg_toIcs_Result(Result<double> degPos){
+    inline Result<long> fromDeg_toIcs_Result(Result<double> degPos){
         Result<long> result;
         result.value = 0;
         if(degPos.success==true)result.value = fromDeg_toIcs(degPos.value);
@@ -86,7 +132,7 @@ namespace servoICS {
     }
 
     // 角度(deg)を角度(rad)に変換
-    Result<double> fromDeg_toRad_Result(Result<double> degPos){
+    inline Result<double> fromDeg_toRad_Result(Result<double> degPos){
         Result<double> result;
         result.value = 0.0;
         if(degPos.success==true)result.value = fromDeg_toRad(degPos.value);
@@ -96,7 +142,7 @@ namespace servoICS {
     }
 
     // 角度(rad)を角度(deg)に変換
-    Result<double> fromRad_toDeg_Result(Result<double> radPos){
+    inline Result<double> fromRad_toDeg_Result(Result<double> radPos){
         Result<double> result;
         result.value = 0.0;
         if(radPos.success==true)result.value = fromRad_toDeg(radPos.value);
@@ -106,7 +152,7 @@ namespace servoICS {
     }
 
     // 角度(rad)をICS値に変換
-    Result<long> fromRad_toIcs_Result(Result<double> radPos){
+    inline Result<long> fromRad_toIcs_Result(Result<double> radPos){
         Result<long> result;
         result.value = 0;
         if(radPos.success==true)result.value = fromRad_toIcs(radPos.value);
@@ -116,7 +162,7 @@ namespace servoICS {
     }
 
     // ICS値を角度(rad)に変換
-    Result<double> fromIcs_toRad_Result(Result<long> icsPos){
+    inline Result<double> fromIcs_toRad_Result(Result<long> icsPos){
         Result<double> result;
         result.value = 0.0;
         if(icsPos.success==true)result.value = fromIcs_toRad(icsPos.value);
@@ -126,17 +172,18 @@ namespace servoICS {
     }
 
 
-
     class Servo{
         private:
-            //角度
-            long targetPos_ = 0;    //目標Pos
-
             //通信設定
             Stream* portStream_ = nullptr;   // 使用するシリアルインスタンス
             char enPin_ = -1;        // 送受切替ピン（不要な場合は-1）
             bool sendOnly_ = 0; // 送信のみフラグ (受信しない場合は1)
             uint8_t servoId_ = 0;    // サーボID
+
+            //チェーンメソッド用変数
+            bool is_sent = 0;   //送信関数を使用したら立つ、reset_で降ろす。
+            Result<void> status;
+
 
             //追加機能パラメータ
             long offSet_ = 0;    //ソフトウェアオフセット値(ICS値)
@@ -144,19 +191,31 @@ namespace servoICS {
             long maxIcs_ = ICS_HIGH;//ソフトウェアリミット最大()デフォルト値:ICS_HIGH)
             unsigned long waitTimeUs_ = 0; //通信を空ける時間(us)
 
+            //データの送受信
+            Result<void> transfer_(unsigned char* txBuf, unsigned long txLen, unsigned char* rxBuf, unsigned long rxLen);
+
             Result<long> getPosRecive_();
             Result<long> getPosCommand_();
+
+            //メソッドチェーン用　変数、フラグ整理関数
+            //メソッドチェーンの最後には絶対これを呼び出す。
+            Result<void> reset_(){
+                Result<void> result;
+                is_sent = 0;
+                result.success = 1;
+                return result;
+            }
 
         public:
 
             //成功の場合true、失敗の場合falseを返す
-            Result<void> attach(void* port, uint8_t id);
+            Result<void> attach(Stream* port,char enPin, uint8_t id);
 
             //setPos
             Servo& setPos(long ics);
-            Servo& setPosIcs(long ics){return setPos(ics);};    
-            Servo& setPosDeg(double deg){return setPos(fromDeg_toIcs(deg));};
-            Servo& setPosRad(double rad){return setPos(fromRad_toIcs(rad));};
+            Servo& setPosIcs(long ics){return setPos(ics);}
+            Servo& setPosDeg(double deg){return setPos(fromDeg_toIcs(deg));}
+            Servo& setPosRad(double rad){return setPos(fromRad_toIcs(rad));}
             Servo& setPosFree(){return setPos(0);}; 
 
             //スピードとストレッチのset
@@ -164,133 +223,47 @@ namespace servoICS {
             Result<void> setStretch(unsigned char stretch);
 
             //getPos
-            Result<long> getPos();  //呼び出す場面で処理が異なる。
-            Result<long> getPosIcs(){return getPos();};
-            Result<double> getPosDeg(){return fromIcs_toDeg_Result(getPos());};
-            Result<double> getPosRad(){return fromIcs_toRad_Result(getPos());};
+            Result<long> getPos(){if(is_sent){return getPosRecive_();}else{return getPosCommand_();}}  //呼び出す場面で処理が異なる。
+            Result<long> getPosIcs(){return getPos();}
+            Result<double> getPosDeg(){return fromIcs_toDeg_Result(getPos());}
+            Result<double> getPosRad(){return fromIcs_toRad_Result(getPos());}
+
+            //スピードとストレッチのget
+            Result<int> getSpeed();
+            Result<int> getStretch();
 
             //追加機能の設定
             //オフセット
             Result<void> setOffset(long offsetIcs);
-            Result<void> setOffsetIcs(long offsetIcs){return setOffset(offsetIcs);};
-            Result<void> setOffsetDeg(double offsetDeg){return setOffset(fromDeg_toIcs(offsetDeg));};
-            Result<void> setOffsetRad(double offsetRad){return setOffset(fromRad_toIcs(offsetRad));};
+            Result<void> setOffsetIcs(long offsetIcs){return setOffset(offsetIcs);}
+            Result<void> setOffsetDeg(double offsetDeg){return setOffset(fromDeg_toIcs(offsetDeg));}
+            Result<void> setOffsetRad(double offsetRad){return setOffset(fromRad_toIcs(offsetRad));}
+
+            Result<long> getOffset();
+            Result<long> getOffsetIcs(){return getOffset();}
+            Result<double> getOffsetDeg(){return fromIcs_toDeg_Result(getOffset());}
+            Result<double> getOffsetRad(){return fromIcs_toRad_Result(getOffset());}
 
             //リミット設定
-            Result<void> setMin(long minIcs);
-            Result<void> setMinIcs(long minIcs){return setMin(minIcs);};
-            Result<void> setMinDeg(double minDeg){return setMin(fromDeg_toIcs(minDeg));};
-            Result<void> setMinRad(double minRad){return setMin(fromRad_toIcs(minRad));};
+            Result<void> setMSMin(long minIcs);//movable scope可動範囲
+            Result<void> setMSMinIcs(long minIcs){return setMSMin(minIcs);}
+            Result<void> setMSMinDeg(double minDeg){return setMSMin(fromDeg_toIcs(minDeg));}
+            Result<void> setMSMinRad(double minRad){return setMSMin(fromRad_toIcs(minRad));}
             
-            Result<void> setMax(long maxIcs);
-            Result<void> setMaxIcs(long maxIcs){return setMax(maxIcs);};
-            Result<void> setMaxDeg(double maxDeg){return setMax(fromDeg_toIcs(maxDeg));};
-            Result<void> setMaxRad(double maxRad){return setMax(fromRad_toIcs(maxRad));};
-
-
-
-    };
-
-
-    class UratPort{
-        public:
-            typedef struct {
-                Stream* serialPort;   // 使用するシリアルインスタンス
-                char enPin = -1;        // 送受切替ピン（不要な場合は-1）
-                unsigned char sendOnly = 0; // 送信のみフラグ (受信しない場合は1)
-            } PortConfig;
-
-        private:
-            PortConfig config;
-
-        public:
-            //成功の場合true、失敗の場合falseを返す
-            Result<void> begin(PortConfig config_);
-
-            //ポート設定を取得
-            Result<PortConfig> getPortConfig(){
-                Result<PortConfig> config_;
-                config_.success = true;
-                config_.value = config;
-                return config_;
-            }
-            Result<void> transfer(unsigned char* txBuf, unsigned long txLen, unsigned char* rxBuf, unsigned long rxLen);
-    };
-
-    class KrsServo{
-        private:
-            UratPort uratPort;
-        public:
-            typedef struct {
-                int id = 0;            // サーボID
-                long offSetIcs = 0;    //ソフトウェアオフセット値(ICS値)
-                long minIcs = servoICS::ICS_LOW; //ソフトウェアリミット最小(デフォルト値:ICS_LOW)
-                long maxIcs = servoICS::ICS_HIGH;//ソフトウェアリミット最大()デフォルト値:ICS_HIGH)
-                unsigned long waitTimeUs = 2000; //通信を空ける時間(us)
-            } ServoConfig;
-            ServoConfig servoConfig; //述繋ぎによるメインのサーボ制御はこの変数を通じて行う
-
-            IcsAngle target; //指令値格納用変数
-
-            //成功の場合true、失敗の場合falseを返す
-            Result<void> setup(UratPort::PortConfig portConfig_,ServoConfig servoConfig_);
-
-            <こまかい実装>
+            Result<void> setMSMax(long maxIcs);
+            Result<void> setMSMaxIcs(long maxIcs){return setMSMax(maxIcs);}
+            Result<void> setMSMaxDeg(double maxDeg){return setMSMax(fromDeg_toIcs(maxDeg));}
+            Result<void> setMSMaxRad(double maxRad){return setMSMax(fromRad_toIcs(maxRad));}
             
+            Result<long> getMSMin();
+            Result<long> getMSMinIcs(){return getMSMin();}
+            Result<double> getMSMinDeg(){return fromIcs_toDeg_Result(getMSMin());}
+            Result<double> getMSMinRad(){return fromIcs_toRad_Result(getMSMin());}
 
+            Result<long> getMSMax();
+            Result<long> getMSMaxIcs(){return getMSMax();}
+            Result<double> getMSMaxDeg(){return fromIcs_toDeg_Result(getMSMax());}
+            Result<double> getMSMaxRad(){return fromIcs_toRad_Result(getMSMax());}
 
-
-    };
-
-    class Servo{
-        public:
-            typedef struct {
-                Stream* serialPort;   // 使用するシリアルインスタンス
-                char enPin = -1;        // 送受切替ピン（不要な場合は-1）
-                unsigned char sendOnly = 0; // 送信のみフラグ (受信しない場合は1)
-            } PortConfig;
-            PortConfig portConfig;
-
-            typedef struct {
-                long offSetIcs = 0;    //ソフトウェアオフセット値(ICS値)
-                long minIcs = servoICS::ICS_LOW; //ソフトウェアリミット最小(デフォルト値:ICS_LOW)
-                long maxIcs = servoICS::ICS_HIGH;//ソフトウェアリミット最大()デフォルト値:ICS_HIGH)
-                unsigned long waitTimeUs = 2000; //通信を空ける時間(us)
-            } ServoConfig;
-            ServoConfig servoConfig; //述繋ぎによるメインのサーボ制御はこの変数を通じて行う
-
-        
-            typedef struct {
-                char workSeek=0;    //処理進度  (0: 初期状態 1:set等 2:update完了 3:get完了)
-                long setAngle=0;    //指令値
-                long getAngle=0;    //取得値
-                bool isFree=false;  //脱力状態フラグ
-                const char* error_msg = ""; //エラーメッセージ
-            } servoStatus;
-
-            servoStatus status; //述繋ぎによるメインのサーボ制御はこの変数を通じて行う
-
-            //成功の場合true、失敗の場合falseを返す
-            Result<int> attach(void* port, uint8_t id);
-
-            //set用関数類
-            Servo& setIcs(long ics);
-            Servo& setDeg(double deg);
-            Servo& setRad(double rad);
-            Servo& setFree();
-
-            //動作関数
-            Servo& update();
-            Result<int> setOffset();
-            
-
-
-            //get用関数類
-            Result<long> getIcs();
-            Result<double> getDeg();
-            Result<double> getRad();
-
-
-            bool transfer(unsigned char* txBuf, unsigned long txLen, unsigned char* rxBuf, unsigned long rxLen);
     };
 }

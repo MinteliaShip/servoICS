@@ -6,46 +6,79 @@
 */
 
 #include <Arduino.h>
-#include <KrsUnit.h>
+#include <servoICS.h>
 
-KrsServoFull::KrsUnit servo;
+servoICS::Servo servo;
 
 void setup() {
   Serial.begin(115200);
 
   Serial2.begin(115200, SERIAL_8E1, 19, 33);
-  Serial2.setTimeout(100);
+  //Serial2.setTimeout(100);
 
-  auto myport = 
 
-  KrsServoFull::KrsUnit::portconfig myport;
-  myport.port = &Serial2;
-  myport.enPin = 23;
-  myport.sendOnly = 0;
 
-  servo.attach(&myport, 1);
+  int enpin = 23;
+  int id = 0;
+
+  servo.attach(&Serial2, enpin, id);
 
   delay(1000);
 
-  servo.setDeg(90.0).update();
+  servo.setPosDeg(90.0);
   delay(500);
-  servo.setDeg(0.0).update();
+  servo.setPos(7500);
+  delay(500);
+
+  char str[100] = "";
+  sprintf(str,"getPos:%d | getPosDeg:%d\n",servo.getPos().value,servo.getPosDeg().value);
+  Serial.print(str);
+
+  servo.setOffset(7500);
+  Serial.printf("[setOffset(7500)] getOffset:%d | getOffsetDeg:%f \n",servo.getOffset().value, servo.getOffsetDeg().value);
   delay(1000);
 
-  Serial.println(KrsServoFull::KrsUnit::BAM32_TO_ICS(KrsServoFull::KrsUnit::ICS_TO_BAM32(7500)));
-  Serial.println(KrsServoFull::KrsUnit::BAM32_TO_ICS(KrsServoFull::KrsUnit::DEG_TO_BAM32(0)));
-  Serial.println(KrsServoFull::KrsUnit::BAM32_TO_ICS(0));
+  servo.setOffsetDeg(0);
+  Serial.printf("[setOffsetDeg(0)] getOffset:%d | getOffsetDeg:%f \n",servo.getOffset().value, servo.getOffsetDeg().value);
+  delay(1000);
 
-  Serial.println(KrsServoFull::KrsUnit::BAM32_TO_DEG(KrsServoFull::KrsUnit::DEG_TO_BAM32(-10)));
-  Serial.println(KrsServoFull::KrsUnit::BAM32_TO_RAD(KrsServoFull::KrsUnit::RAD_TO_BAM32(-1.0)));
-  Serial.println(KrsServoFull::KrsUnit::BAM32_TO_ICS(0));
+
 
 }
 
 
 void loop() {
-  Serial.print("[i]pos:");
-  servo.setFree().update();
-  Serial.println(servo.getDeg());
-  delay(10);
+  servo.setStretch(servoICS::ICS_MIN_STRETCH);
+
+  auto result = servo.getStretch();
+
+  for(int i = servoICS::ICS_HIGH/2;i > servoICS::ICS_LOW;i--){
+    long getpos = servo.setPos(i).getPosIcs();
+    
+    char str[100] = "";
+    sprintf(str,"[Down] getPos:%d [result]result:%d success:%d\n\0",getpos,result.value,result.success);
+    Serial.print(str);
+  }
+
+  servo.setStretch(servoICS::ICS_MAX_STRETCH);
+  result = servo.getStretch();
+
+  for(int i = servoICS::ICS_LOW;i < servoICS::ICS_HIGH/2;i++){
+    auto getpos = servo.setPos(i).getPosIcs();
+    char str[100] = "";
+    sprintf(str,"[Up] getPos:%d | success:%d [result]result:%d success:%d\n\0",getpos.value,getpos.success,result.value,result.success);
+    Serial.print(str);
+  }
+
+  servo.setStretch(servoICS::ICS_MIN_STRETCH);
+  for(int i = servoICS::ICS_MIN_STRETCH;i < servoICS::ICS_MAX_STRETCH;i++){
+      servo.setStretch(i);
+      servo.setPos(servo.getPos().value);
+      Serial.printf("getPosDeg:%f \n",servo.getPosDeg().value);
+      delay(10);
+
+  }
+
+  delay(1000);
+
 }

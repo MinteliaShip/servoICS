@@ -1,83 +1,229 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (C) 2025 MinteIiaShip
 
-#include "KrsUnit.h"
+#include "servoICS.h"
+
 namespace servoICS {
 
-    void KrsUnit::attach(void* port, uint8_t id) {
-        commport = *static_cast<portconfig*>(port);
-        if(commport.enPin >= 0)pinMode(commport.enPin, OUTPUT);
-        _id = id;
+    Result<void> Servo::transfer_(unsigned char* txBuf, unsigned long txLen, unsigned char* rxBuf, unsigned long rxLen){
+        Result<void> result;
+        result.success = 1;
+
+        //portStream_に実体がない時に帰ってもらう
+        if(portStream_ == nullptr){
+            result.success = 0;
+            result.error_msg = "[E]portStream_に実体がない。";
+            return result;
+        }
+
+        if(txLen > 0){
+            if(enPin_ >= 0)digitalWrite(enPin_, HIGH);
+            portStream_->flush();          // Wait
+            portStream_->write(txBuf, txLen); // Transmit array.
+            portStream_->flush();          // Wait until transmission is complete
+            if(enPin_ >= 0)digitalWrite(enPin_, LOW);
+        }
+        
+        if(rxLen > 0){
+            if(enPin_ >= 0)digitalWrite(enPin_, LOW);
+            while (portStream_->available() > 0) portStream_->read(); // Clear buffer
+            unsigned long val = portStream_->readBytes(rxBuf, rxLen);
+            if (val != rxLen) {
+                result.success = 0;
+                result.error_msg = "[E]受信のデータ数が合わない";
+            }
+        }
+        return result;
     }
 
-    ServoUnit& KrsUnit::setIcs(uint16_t ics){
-        if(ics == 0){
-            _isFree = true;
+    Result<void>  Servo::attach(Stream* port,char enPin, uint8_t id) {
+        Result<void> result;
+        result.success = 1;
+        portStream_ = port;
+        servoId_ = id;
+        enPin_ = enPin;
+        if(enPin_ >= 0)pinMode(enPin_, OUTPUT);
+        if(enPin_ >= 0)digitalWrite(enPin_, LOW);
+        return result;
+    }
+
+    Servo& Servo::setPos(long ics){
+        status.success = 1;
+
+        //オフセットを反映させる。
+        ics = ics + (offSet_ - 7500);
+
+        //異常指令値をはじく。
+        if(ics > maxIcs_){
+            status.success = 0;
+            status.error_msg = "[E]setPos:上限maxIcs_より指令値icsの方が大きいです。";
+            return *this;
+        }else if((ics < minIcs_)&&(ics != 0)){
+            status.success = 0;
+            status.error_msg = "[E]setPos:下限minIcs_より指令値icsの方が小さいです。";
             return *this;
         }
-        _isFree = false;
-        _targetAngle32 = ICS_TO_BAM32(ics);
-        return *this;
-    }
-
-    uint16_t KrsUnit::getIcs(){
-        return BAM32_TO_ICS(_currentAngle32);
-    }
-
-    void KrsUnit::setParameter(uint16_t address, const void* buffer, size_t size) {
-    }
-    void KrsUnit::getCustomData(uint16_t address, void* buffer, size_t size) {
-    }
-    bool KrsUnit::saveConfig(const void* buffer, size_t size) {
-        return true;
-    }
-
-    bool KrsUnit::update(){
 
         unsigned char txByte[3];
-        unsigned char reByte[3];
+        // ics用にデータを配置。
+        txByte[0] = 0b10000000 | (0b00011111 & servoId_);
+        txByte[1] = char((ics & 0b00011111110000000) >> 7);
+        txByte[2] = char(ics & 0b00000000001111111);
 
-        long _posVal = BAM32_TO_ICS(_targetAngle32);
+        ::delayMicroseconds(waitTimeUs_);
 
-        if(!_isFree){//0はスキップ
-            _posVal = _posVal + BAM32_TO_ICS(_offSet) - BAM32_TO_ICS(0);
-            if (_posVal > 11500) {
-            return 1;
-            } else if (_posVal < 3500) {
-            return 1;
-            }
-        }else{
-            _posVal = 0;
-        }
+        //データ送信
+        status = transfer_(txByte, 3, 0, 0);
 
-        // 規格用にデータを調整。
-        txByte[0] = 0b10011111 & (0b10000000 | _id);
-        txByte[1] = char((_posVal & 0b00011111110000000) >> 7);
-        txByte[2] = char(_posVal & 0b00000000001111111);
+        Servo Proxy = *this;
 
-        delayMicroseconds(_waitTime);
+        Proxy.is_sent = 1;//送信済み
 
-        if (commport.sendOnly) {
-            transfer(txByte, 3, reByte, 0);
-        } else if (transfer(txByte, 3, reByte, 3)) {
-            return 1;
-        }
-
-        _posVal = (unsigned long int)(reByte[1] << 7) | reByte[2];
-        _currentAngle32 = ICS_TO_BAM32((uint16_t)_posVal);
-        return 0;
+        return Proxy;
     }
 
-    bool KrsUnit::transfer(unsigned char* txBuf, unsigned long txLen, unsigned char* rxBuf, unsigned long rxLen){
-        if(commport.enPin >= 0)digitalWrite(commport.enPin, HIGH);
-        commport.port->flush();          // Wait
-        commport.port->write(txBuf, txLen); // Transmit array.
-        commport.port->flush();          // Wait until transmission is complete
+    //スピードとストレッチのset
+    Result<void> Servo::setSpeed(unsigned char speed){
+        Result<void> result;
+        result.success = 1;
+        unsigned char txByte[3];
 
-        if(commport.enPin >= 0)digitalWrite(commport.enPin, LOW);
-        while (commport.port->available() > 0) commport.port->read(); // Clear buffer
-        unsigned long val = commport.port->readBytes(rxBuf, rxLen);
-        if (val == rxLen) return 0;
-        return 1;
+        if(speed < 1 || speed > 127){
+            result.success = 0;
+            result.error_msg = "[E]setSpeed:speed指令値が範囲外(1~127)";
+            return result;
+        }
+
+        txByte[0] = 0b11000000 | (0b00011111 & servoId_);
+        txByte[1] = 0x02;   //スピードのSC
+        txByte[2] = speed;
+
+        result = transfer_(txByte, 3, 0, 0);
+        return result;
     }
+
+    Result<void> Servo::setStretch(unsigned char stretch){
+        Result<void> result;
+        result.success = 1;
+        unsigned char txByte[3];
+
+        if(stretch < 1 || stretch > 127){
+            result.success = 0;
+            result.error_msg = "[E]setStretch:stretch指令値が範囲外(1~127)";
+            return result;
+        }
+
+        txByte[0] = 0b11000000 | (0b00011111 & servoId_);
+        txByte[1] = 0x01;   //ストレッチのSC
+        txByte[2] = stretch;
+
+        result = transfer_(txByte, 3, 0, 0);
+        return result;
+    }
+
+
+    Result<long> Servo::getPosRecive_(){
+        Result<long> result = status;
+        if(result.success == 0){
+            //前の関数は失敗しているので処理をスキップ。
+            return result;
+        }
+
+        unsigned char rxByte[3];
+        result = transfer_(0, 0, rxByte, 3);
+        result.value = (unsigned long int)(rxByte[1] << 7) | rxByte[2];
+        return result;
+    }
+
+    Result<long> Servo::getPosCommand_(){
+        Result<long> result;
+
+        unsigned char txByte[3];
+        txByte[0] = 0b10100000 | (0b00011111 & servoId_);
+        txByte[1] = 0x05;   //角度のSC
+
+        unsigned char rxByte[4];
+        result = transfer_(txByte, 2, rxByte, 4);
+        result.value = (unsigned long int)(rxByte[2] << 7) | rxByte[3];
+        return result;
+    }
+
+    Result<int> Servo::getSpeed(){
+        Result<int> result;
+
+        unsigned char txByte[3];
+        txByte[0] = 0b10100000 | (0b00011111 & servoId_);
+        txByte[1] = 0x02;   //SpeedのSC
+
+        unsigned char rxByte[3];
+        result = transfer_(txByte, 2, rxByte, 3);
+        result.value = rxByte[2];
+        return result;
+    }
+
+    Result<int> Servo::getStretch(){
+        Result<int> result;
+        result.success = 1;
+
+        unsigned char txByte[3];
+        txByte[0] = 0b10100000 | (0b00011111 & servoId_);
+        txByte[1] = 0x01;   //StretchのSC
+
+        unsigned char rxByte[3];
+        result = transfer_(txByte, 2, rxByte, 3);
+        result.value = rxByte[2];
+        return result;
+    }
+
+    Result<void> Servo::setOffset(long offsetIcs){
+        Result<void> result;
+        result.success = 1;
+
+        if((offsetIcs<minIcs_)&&(maxIcs_<offsetIcs)){
+            result.error_msg = "[E] setOffset:オフセット設定値が設置した角度内にありません";
+            result.success = 0;
+            return result;
+        }
+
+        offSet_ = offsetIcs;
+        return result;
+    }
+
+    Result<long> Servo::getOffset(){
+        Result<long> result;
+        result.success = 1;
+        result.value = offSet_;
+        return result;
+    }
+
+    Result<void> Servo::setMSMin(long minIcs){
+        Result<void> result;
+        result.success = 1;
+        minIcs_ = minIcs;
+        return result;
+    }
+
+    Result<void> Servo::setMSMax(long maxIcs){
+        Result<void> result;
+        result.success = 1;
+        maxIcs_ = maxIcs;
+        return result;
+    }
+
+    Result<long> Servo::getMSMin(){
+        Result<long> result;
+        result.success = 1;
+        result.value = minIcs_;
+        return result;
+    }
+
+    Result<long> Servo::getMSMax(){
+        Result<long> result;
+        result.success = 1;
+        result.value = maxIcs_;
+        return result;
+    }
+
+
+
 }
