@@ -43,7 +43,6 @@ void setup() {
   delay(1000);
 
 
-
 }
 
 
@@ -71,12 +70,10 @@ void loop() {
   }
 
   servo.setStretch(servoICS::ICS_MIN_STRETCH);
-  for(int i = servoICS::ICS_MIN_STRETCH;i < servoICS::ICS_MAX_STRETCH;i++){
-      servo.setStretch(i);
+  for(int i = servoICS::ICS_MIN_STRETCH;i < servoICS::ICS_MAX_STRETCH*100;i++){
+      servo.setStretch(i/100);
       servo.setPos(servo.getPos().value);
-      Serial.printf("getPosDeg:%f \n",servo.getPosDeg().value);
-      delay(10);
-
+      Serial.printf("getPosDeg:%f getStretch:%d \n",servo.getPosDeg().value,(int)servo.getStretch());
   }
 
   delay(1000);

@@ -12,15 +12,15 @@ namespace servoICS {
         //portStream_に実体がない時に帰ってもらう
         if(portStream_ == nullptr){
             result.success = 0;
-            result.error_msg = "[E]portStream_に実体がない。";
+            result.error_msg = "[E]transfer_:portStream_に実体がない。";
             return result;
         }
 
         if(txLen > 0){
+            ::delayMicroseconds(waitTimeUs_);
             if(enPin_ >= 0)digitalWrite(enPin_, HIGH);
-            portStream_->flush();          // Wait
             portStream_->write(txBuf, txLen); // Transmit array.
-            portStream_->flush();          // Wait until transmission is complete
+            portStream_->flush();
             if(enPin_ >= 0)digitalWrite(enPin_, LOW);
         }
         
@@ -30,9 +30,10 @@ namespace servoICS {
             unsigned long val = portStream_->readBytes(rxBuf, rxLen);
             if (val != rxLen) {
                 result.success = 0;
-                result.error_msg = "[E]受信のデータ数が合わない";
+                result.error_msg = "[E]transfer_:受信のデータ数が合わない";
             }
         }
+
         return result;
     }
 
@@ -44,10 +45,12 @@ namespace servoICS {
         enPin_ = enPin;
         if(enPin_ >= 0)pinMode(enPin_, OUTPUT);
         if(enPin_ >= 0)digitalWrite(enPin_, LOW);
+
+        sub.p = this;//子クラスに参照を渡す。
         return result;
     }
 
-    Servo& Servo::setPos(long ics){
+    Servo::SubGetPos& Servo::setPos(long ics){
         status.success = 1;
 
         //オフセットを反映させる。
@@ -57,11 +60,11 @@ namespace servoICS {
         if(ics > maxIcs_){
             status.success = 0;
             status.error_msg = "[E]setPos:上限maxIcs_より指令値icsの方が大きいです。";
-            return *this;
+            return sub;
         }else if((ics < minIcs_)&&(ics != 0)){
             status.success = 0;
             status.error_msg = "[E]setPos:下限minIcs_より指令値icsの方が小さいです。";
-            return *this;
+            return sub;
         }
 
         unsigned char txByte[3];
@@ -70,16 +73,10 @@ namespace servoICS {
         txByte[1] = char((ics & 0b00011111110000000) >> 7);
         txByte[2] = char(ics & 0b00000000001111111);
 
-        ::delayMicroseconds(waitTimeUs_);
-
         //データ送信
         status = transfer_(txByte, 3, 0, 0);
 
-        Servo Proxy = *this;
-
-        Proxy.is_sent = 1;//送信済み
-
-        return Proxy;
+        return sub;
     }
 
     //スピードとストレッチのset
@@ -122,15 +119,15 @@ namespace servoICS {
     }
 
 
-    Result<long> Servo::getPosRecive_(){
-        Result<long> result = status;
+    Result<long> Servo::SubGetPos::getPosRecive_(){
+        Result<long> result = p->status;
         if(result.success == 0){
             //前の関数は失敗しているので処理をスキップ。
             return result;
         }
 
         unsigned char rxByte[3];
-        result = transfer_(0, 0, rxByte, 3);
+        result = p->transfer_(0, 0, rxByte, 3);
         result.value = (unsigned long int)(rxByte[1] << 7) | rxByte[2];
         return result;
     }

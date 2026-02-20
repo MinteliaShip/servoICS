@@ -181,30 +181,29 @@ namespace servoICS {
             uint8_t servoId_ = 0;    // サーボID
 
             //チェーンメソッド用変数
-            bool is_sent = 0;   //送信関数を使用したら立つ、reset_で降ろす。
             Result<void> status;
-
 
             //追加機能パラメータ
             long offSet_ = 0;    //ソフトウェアオフセット値(ICS値)
             long minIcs_ = ICS_LOW; //ソフトウェアリミット最小(デフォルト値:ICS_LOW)
             long maxIcs_ = ICS_HIGH;//ソフトウェアリミット最大()デフォルト値:ICS_HIGH)
-            unsigned long waitTimeUs_ = 0; //通信を空ける時間(us)
+            unsigned long waitTimeUs_ = 1000; //通信を空ける時間(us)
 
             //データの送受信
             Result<void> transfer_(unsigned char* txBuf, unsigned long txLen, unsigned char* rxBuf, unsigned long rxLen);
-
-            Result<long> getPosRecive_();
             Result<long> getPosCommand_();
 
-            //メソッドチェーン用　変数、フラグ整理関数
-            //メソッドチェーンの最後には絶対これを呼び出す。
-            Result<void> reset_(){
-                Result<void> result;
-                is_sent = 0;
-                result.success = 1;
-                return result;
-            }
+            class SubGetPos{
+                public:
+                    Servo* p = nullptr;
+                    Result<long> getPosRecive_();
+                    Result<long> getPos(){return getPosRecive_();}  //呼び出す場面で処理が異なる。
+                    Result<long> getPosIcs(){return getPos();}
+                    Result<double> getPosDeg(){return fromIcs_toDeg_Result(getPos());}
+                    Result<double> getPosRad(){return fromIcs_toRad_Result(getPos());}
+            };
+            
+            SubGetPos sub;
 
         public:
 
@@ -212,18 +211,18 @@ namespace servoICS {
             Result<void> attach(Stream* port,char enPin, uint8_t id);
 
             //setPos
-            Servo& setPos(long ics);
-            Servo& setPosIcs(long ics){return setPos(ics);}
-            Servo& setPosDeg(double deg){return setPos(fromDeg_toIcs(deg));}
-            Servo& setPosRad(double rad){return setPos(fromRad_toIcs(rad));}
-            Servo& setPosFree(){return setPos(0);}; 
+            SubGetPos& setPos(long ics);
+            SubGetPos& setPosIcs(long ics){return setPos(ics);}
+            SubGetPos& setPosDeg(double deg){return setPos(fromDeg_toIcs(deg));}
+            SubGetPos& setPosRad(double rad){return setPos(fromRad_toIcs(rad));}
+            SubGetPos& setPosFree(){return setPos(0);}; 
 
             //スピードとストレッチのset
             Result<void> setSpeed(unsigned char speed);
             Result<void> setStretch(unsigned char stretch);
 
             //getPos
-            Result<long> getPos(){if(is_sent){return getPosRecive_();}else{return getPosCommand_();}}  //呼び出す場面で処理が異なる。
+            Result<long> getPos(){return getPosCommand_();}  //呼び出す場面で処理が異なる。
             Result<long> getPosIcs(){return getPos();}
             Result<double> getPosDeg(){return fromIcs_toDeg_Result(getPos());}
             Result<double> getPosRad(){return fromIcs_toRad_Result(getPos());}
