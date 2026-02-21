@@ -2,7 +2,7 @@
 // Copyright (C) 2025 MinteIiaShip
 
 /*
-  ESP32用ServoAnyPlateライブラリサンプルコード 送受信
+  ライブラリサンプルコード 送信のみ
 */
 
 #include <Arduino.h>
@@ -20,12 +20,20 @@ void setup() {
   //サーボへの通信設定 EN:23 ID:0
   servo.attach(&Serial2, 23, 0);
 
-  servo.setPosDeg(0.0);
-
+  servo.setStretch(servoICS::ICS_MAX_STRETCH);
+  servo.setSpeed(servoICS::ICS_MAX_SPEED);
 }
 
 void loop() {
+  //ICS値を11500から3500まで変化させてサーボに送信
   for(int i = 11500;i > 3500;i--){
-    Serial.printf("pos:%d \n",servo.setPos(i).getPos().value);
+    servo.setPos(i);
+    delay(1);
+  }
+
+  //ICS値を-135から135まで変化させてサーボに送信
+  for(int i = -135;i < 135;i++){
+    servo.setPosDeg(i);
+    delay(10);
   }
 }

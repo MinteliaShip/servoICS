@@ -177,14 +177,13 @@ namespace servoICS {
             //通信設定
             Stream* portStream_ = nullptr;   // 使用するシリアルインスタンス
             char enPin_ = -1;        // 送受切替ピン（不要な場合は-1）
-            bool sendOnly_ = 0; // 送信のみフラグ (受信しない場合は1)
             uint8_t servoId_ = 0;    // サーボID
 
             //チェーンメソッド用変数
             Result<void> status;
 
             //追加機能パラメータ
-            long offSet_ = 0;    //ソフトウェアオフセット値(ICS値)
+            long offSet_ = 7500;    //ソフトウェアオフセット値(ICS値)
             long minIcs_ = ICS_LOW; //ソフトウェアリミット最小(デフォルト値:ICS_LOW)
             long maxIcs_ = ICS_HIGH;//ソフトウェアリミット最大()デフォルト値:ICS_HIGH)
             unsigned long waitTimeUs_ = 1000; //通信を空ける時間(us)
