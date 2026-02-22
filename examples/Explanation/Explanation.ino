@@ -2,7 +2,7 @@
 // Copyright (C) 2025 MinteIiaShip
 
 /*
-  ESP32用ServoAnyPlateライブラリサンプルコード 送受信
+  ESP32用servoICSライブラリサンプルコード 送受信
 */
 
 #include <Arduino.h>
