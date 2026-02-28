@@ -200,6 +200,8 @@ namespace servoICS {
                     Result<long> getPosIcs(){return getPos();}
                     Result<double> getPosDeg(){return fromIcs_toDeg_Result(getPos());}
                     Result<double> getPosRad(){return fromIcs_toRad_Result(getPos());}
+
+                    Result<void> returnStatus(){return p->status;}
             };
             
             SubGetPos sub;
@@ -262,6 +264,8 @@ namespace servoICS {
             Result<long> getMSMaxIcs(){return getMSMax();}
             Result<double> getMSMaxDeg(){return fromIcs_toDeg_Result(getMSMax());}
             Result<double> getMSMaxRad(){return fromIcs_toRad_Result(getMSMax());}
+
+
 
     };
 }
