@@ -182,6 +182,12 @@ namespace servoICS {
             //チェーンメソッド用変数
             Result<void> status;
 
+            //スキップ機能有効化フラグ(0:off 1:on)
+            bool isSkip_ = 0;
+            //前の角度を保持。スキップ判定に使用。
+            long prePos_ = 0;
+
+
             //追加機能パラメータ
             long offSet_ = 7500;    //ソフトウェアオフセット値(ICS値)
             long minIcs_ = ICS_LOW; //ソフトウェアリミット最小(デフォルト値:ICS_LOW)
@@ -262,6 +268,10 @@ namespace servoICS {
             Result<long> getMSMaxIcs(){return getMSMax();}
             Result<double> getMSMaxDeg(){return fromIcs_toDeg_Result(getMSMax());}
             Result<double> getMSMaxRad(){return fromIcs_toRad_Result(getMSMax());}
+
+            //スキップ機能
+            void setSkip(bool isSkip);
+            bool getSkip(){return isSkip_;}
 
     };
 }

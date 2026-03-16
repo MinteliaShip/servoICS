@@ -51,6 +51,15 @@ namespace servoICS {
     }
 
     Servo::SubGetPos& Servo::setPos(long ics){
+
+        if((ics == prePos_) && isSkip_){
+            status.success = 1;
+            status.error_msg = "[I]スキップを実行しました。";
+            return sub;
+        }
+        prePos_ = ics;
+
+
         status.success = 1;
 
         //オフセットを反映させる。
@@ -221,6 +230,8 @@ namespace servoICS {
         return result;
     }
 
-
+    void Servo::setSkip(bool isSkip){
+        isSkip_ = isSkip;
+    }
 
 }
