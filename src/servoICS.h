@@ -206,6 +206,8 @@ namespace servoICS {
                     Result<long> getPosIcs(){return getPos();}
                     Result<double> getPosDeg(){return fromIcs_toDeg_Result(getPos());}
                     Result<double> getPosRad(){return fromIcs_toRad_Result(getPos());}
+
+                    Result<void> returnStatus(){return p->status;}
             };
             
             SubGetPos sub;
