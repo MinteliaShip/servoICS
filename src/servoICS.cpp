@@ -51,6 +51,7 @@ namespace servoICS {
     }
 
     Servo::SubGetPos& Servo::setPos(long ics){
+
         //可変エラーメッセージ用の箱
         static char error_str[1024] = ""; 
 

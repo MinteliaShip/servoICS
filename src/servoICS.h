@@ -207,7 +207,8 @@ namespace servoICS {
                     Result<double> getPosDeg(){return fromIcs_toDeg_Result(getPos());}
                     Result<double> getPosRad(){return fromIcs_toRad_Result(getPos());}
 
-                    Result<void> getStatus()const{return p->status;}
+                    Result<void> returnStatus(){return p->status;}
+
             };
             
             SubGetPos sub;
@@ -279,8 +280,8 @@ namespace servoICS {
             void setSkip(bool isSkip);
             bool getSkip(){return isSkip_;}
 
-            //状態取得
-            Result<void> getStatus()const{return status;}
+            Result<void> returnStatus()const{return status;}
+
 
     };
 }
