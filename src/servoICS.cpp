@@ -51,6 +51,17 @@ namespace servoICS {
     }
 
     Servo::SubGetPos& Servo::setPos(long ics){
+        //可変エラーメッセージ用の箱
+        static char error_str[1024] = ""; 
+
+        if((ics == prePos_) && isSkip_){
+            status.success = 1;
+            status.error_msg = "[I]スキップを実行しました。";
+            return sub;
+        }
+        prePos_ = ics;
+
+
         status.success = 1;
 
         //オフセットを反映させる。
@@ -59,11 +70,13 @@ namespace servoICS {
         //異常指令値をはじく。
         if(ics > maxIcs_){
             status.success = 0;
-            status.error_msg = "[E]setPos:上限maxIcs_より指令値icsの方が大きいです。";
+            sprintf(error_str,"[E]setPos:上限maxIcs_より指令値icsの方が大きいです。ICS=%d Deg=%d \0",ics,(int)fromIcs_toDeg(ics));
+            status.error_msg = error_str;
             return sub;
         }else if((ics < minIcs_)&&(ics != 0)){
             status.success = 0;
-            status.error_msg = "[E]setPos:下限minIcs_より指令値icsの方が小さいです。";
+            sprintf(error_str,"[E]setPos:下限minIcs_より指令値icsの方が小さいです。ICS=%d Deg=%d \0",ics,(int)fromIcs_toDeg(ics));
+            status.error_msg = error_str;
             return sub;
         }
 
@@ -221,6 +234,8 @@ namespace servoICS {
         return result;
     }
 
-
+    void Servo::setSkip(bool isSkip){
+        isSkip_ = isSkip;
+    }
 
 }
