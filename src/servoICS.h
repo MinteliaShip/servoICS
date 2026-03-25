@@ -1,6 +1,7 @@
+#ifndef SERVOICS_H
+#define SERVOICS_H
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (C) 2025 MinteIiaShip
-
 
 #include <Arduino.h>
 #include <type_traits>
@@ -219,6 +220,8 @@ namespace servoICS {
                 status = attach(port,enPin,id);
             };
 
+            Servo(){};
+
             //成功の場合true、失敗の場合falseを返す
             Result<void> attach(Stream* port,char enPin, uint8_t id);
 
@@ -285,3 +288,5 @@ namespace servoICS {
 
     };
 }
+
+#endif
