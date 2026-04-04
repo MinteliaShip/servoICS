@@ -37,10 +37,10 @@ void setup() {
   //角度指令の返事を受け取る。
 
   //度数法
-  double PosDeg = servo.setPos(0).getPosDeg().value;
+  float PosDeg = servo.setPos(0).getPosDeg().value;
 
   //弧度法
-  double PosRad = servo.setPos(0).getPosRad().value;
+  float PosRad = servo.setPos(0).getPosRad().value;
 
   //ICS角度
   long PosIcs = servo.setPos(0).getPos().value;
@@ -106,7 +106,7 @@ void setup() {
 
   //ここのvalueは、場所によって型が異なる。
   // ・getPos()のvalueはlong型
-  // ・getPosDeg()のvalueはdouble型
+  // ・getPosDeg()のvalueはfloat型
   // ・getStretch()のvalueはint型
   //などなど。
 
@@ -114,7 +114,7 @@ void setup() {
   // 例：getPos()の値を取得する場合
   //long PosIcs = servo.getPos().value;
   // 例：getPosDeg()の値を取得する場合
-  //double PosDeg = servo.getPosDeg().value;
+  //float PosDeg = servo.getPosDeg().value;
   // 例：getStretch()の値を取得する場合
   //int stretch = servo.getStretch().value;
 
