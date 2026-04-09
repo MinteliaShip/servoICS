@@ -25,7 +25,7 @@
 servoICS::Servo servo;
 
 void setup() {
-  Serial.begin(115200);s
+  Serial.begin(115200);
 
   // サーボとの通信設定 (RX:19, TX:33)
   Serial2.begin(115200, SERIAL_8E1, 19, 33);
