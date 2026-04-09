@@ -1,6 +1,7 @@
+#ifndef SERVOICS_H
+#define SERVOICS_H
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (C) 2025 MinteIiaShip
-
 
 #include <Arduino.h>
 #include <type_traits>
@@ -11,14 +12,16 @@ namespace servoICS {
     //KRSモータ用定数
     const long ICS_LOW  = 3500;   // ICS最小値
     const long ICS_HIGH = 11500;  // ICS最大値
-    const double DEG_LOW  = -135.0;   // ICS対応角度最小値
-    const double DEG_HIGH = 135.0;    // ICS対応角度最大値
+    const float DEG_LOW  = -135.0;   // ICS対応角度最小値
+    const float DEG_HIGH = 135.0;    // ICS対応角度最大値
 
     const int ICS_MAX_SPEED = 127;
     const int ICS_MIN_SPEED = 1;
 
     const int ICS_MAX_STRETCH = 127;
     const int ICS_MIN_STRETCH = 1;
+
+    const float myPI = 3.141592653589;
 
     template<typename servoICS_T>
     servoICS_T servoICS_map(servoICS_T value, servoICS_T fromLow, servoICS_T fromHigh, servoICS_T toLow, servoICS_T toHigh) {
@@ -80,39 +83,39 @@ namespace servoICS {
     };
 
     // ICS値を角度(deg)に変換
-    inline double fromIcs_toDeg(long icsPos){
-        return servoICS_map((double)icsPos, (double)ICS_LOW, (double)ICS_HIGH, DEG_LOW, DEG_HIGH);
+    inline float fromIcs_toDeg(long icsPos){
+        return servoICS_map((float)icsPos, (float)ICS_LOW, (float)ICS_HIGH, DEG_LOW, DEG_HIGH);
     }
 
     // 角度(deg)をICS値に変換
-    inline long fromDeg_toIcs(double degPos){
-        return (long)servoICS_map((double)degPos, (double)DEG_LOW, (double)DEG_HIGH, (double)ICS_LOW, (double)ICS_HIGH);
+    inline long fromDeg_toIcs(float degPos){
+        return (long)servoICS_map((float)degPos, (float)DEG_LOW, (float)DEG_HIGH, (float)ICS_LOW, (float)ICS_HIGH);
     }
 
     // 角度(deg)を角度(rad)に変換
-    inline double fromDeg_toRad(double degPos){
-        return degPos * (3.14159265358979323846 / 180.0);
+    inline float fromDeg_toRad(float degPos){
+        return degPos * (myPI / 180.0f);
     }
 
     // 角度(rad)を角度(deg)に変換
-    inline double fromRad_toDeg(double radPos){
-        return radPos * (180.0 / 3.14159265358979323846);
+    inline float fromRad_toDeg(float radPos){
+        return radPos * (180.0f / myPI);
     }
 
     // 角度(rad)をICS値に変換
-    inline double fromRad_toIcs(double radPos){
+    inline float fromRad_toIcs(float radPos){
         return fromDeg_toIcs(fromRad_toDeg(radPos));
     }
 
     // ICS値を角度(rad)に変換
-    inline double fromIcs_toRad(long icsPos){
+    inline float fromIcs_toRad(long icsPos){
         return fromDeg_toRad(fromIcs_toDeg(icsPos));
     }
 
 
     // ICS値を角度(deg)に変換 (返り値構造体版)
-    inline Result<double> fromIcs_toDeg_Result(Result<long> icsPos){
-        Result<double> result;
+    inline Result<float> fromIcs_toDeg_Result(Result<long> icsPos){
+        Result<float> result;
         result.value = 0.0;
         if(icsPos.success==true)result.value = fromIcs_toDeg(icsPos.value);
         result.success = icsPos.success;
@@ -122,7 +125,7 @@ namespace servoICS {
 
 
     // 角度(deg)をICS値に変換
-    inline Result<long> fromDeg_toIcs_Result(Result<double> degPos){
+    inline Result<long> fromDeg_toIcs_Result(Result<float> degPos){
         Result<long> result;
         result.value = 0;
         if(degPos.success==true)result.value = fromDeg_toIcs(degPos.value);
@@ -132,8 +135,8 @@ namespace servoICS {
     }
 
     // 角度(deg)を角度(rad)に変換
-    inline Result<double> fromDeg_toRad_Result(Result<double> degPos){
-        Result<double> result;
+    inline Result<float> fromDeg_toRad_Result(Result<float> degPos){
+        Result<float> result;
         result.value = 0.0;
         if(degPos.success==true)result.value = fromDeg_toRad(degPos.value);
         result.success = degPos.success;
@@ -142,8 +145,8 @@ namespace servoICS {
     }
 
     // 角度(rad)を角度(deg)に変換
-    inline Result<double> fromRad_toDeg_Result(Result<double> radPos){
-        Result<double> result;
+    inline Result<float> fromRad_toDeg_Result(Result<float> radPos){
+        Result<float> result;
         result.value = 0.0;
         if(radPos.success==true)result.value = fromRad_toDeg(radPos.value);
         result.success = radPos.success;
@@ -152,7 +155,7 @@ namespace servoICS {
     }
 
     // 角度(rad)をICS値に変換
-    inline Result<long> fromRad_toIcs_Result(Result<double> radPos){
+    inline Result<long> fromRad_toIcs_Result(Result<float> radPos){
         Result<long> result;
         result.value = 0;
         if(radPos.success==true)result.value = fromRad_toIcs(radPos.value);
@@ -162,8 +165,8 @@ namespace servoICS {
     }
 
     // ICS値を角度(rad)に変換
-    inline Result<double> fromIcs_toRad_Result(Result<long> icsPos){
-        Result<double> result;
+    inline Result<float> fromIcs_toRad_Result(Result<long> icsPos){
+        Result<float> result;
         result.value = 0.0;
         if(icsPos.success==true)result.value = fromIcs_toRad(icsPos.value);
         result.success = icsPos.success;
@@ -182,6 +185,12 @@ namespace servoICS {
             //チェーンメソッド用変数
             Result<void> status;
 
+            //スキップ機能有効化フラグ(0:off 1:on)
+            bool isSkip_ = 0;
+            //前の角度を保持。スキップ判定に使用。
+            long prePos_ = 0;
+
+
             //追加機能パラメータ
             long offSet_ = 7500;    //ソフトウェアオフセット値(ICS値)
             long minIcs_ = ICS_LOW; //ソフトウェアリミット最小(デフォルト値:ICS_LOW)
@@ -198,13 +207,22 @@ namespace servoICS {
                     Result<long> getPosRecive_();
                     Result<long> getPos(){return getPosRecive_();}  //呼び出す場面で処理が異なる。
                     Result<long> getPosIcs(){return getPos();}
-                    Result<double> getPosDeg(){return fromIcs_toDeg_Result(getPos());}
-                    Result<double> getPosRad(){return fromIcs_toRad_Result(getPos());}
+                    Result<float> getPosDeg(){return fromIcs_toDeg_Result(getPos());}
+                    Result<float> getPosRad(){return fromIcs_toRad_Result(getPos());}
+
+                    Result<void> returnStatus(){return p->status;}
+
             };
             
             SubGetPos sub;
 
         public:
+
+            Servo(Stream* port,char enPin, uint8_t id){
+                status = attach(port,enPin,id);
+            };
+
+            Servo(){};
 
             //成功の場合true、失敗の場合falseを返す
             Result<void> attach(Stream* port,char enPin, uint8_t id);
@@ -212,8 +230,8 @@ namespace servoICS {
             //setPos
             SubGetPos& setPos(long ics);
             SubGetPos& setPosIcs(long ics){return setPos(ics);}
-            SubGetPos& setPosDeg(double deg){return setPos(fromDeg_toIcs(deg));}
-            SubGetPos& setPosRad(double rad){return setPos(fromRad_toIcs(rad));}
+            SubGetPos& setPosDeg(float deg){return setPos(fromDeg_toIcs(deg));}
+            SubGetPos& setPosRad(float rad){return setPos(fromRad_toIcs(rad));}
             SubGetPos& setPosFree(){return setPos(0);}; 
 
             //スピードとストレッチのset
@@ -223,8 +241,8 @@ namespace servoICS {
             //getPos
             Result<long> getPos(){return getPosCommand_();}  //呼び出す場面で処理が異なる。
             Result<long> getPosIcs(){return getPos();}
-            Result<double> getPosDeg(){return fromIcs_toDeg_Result(getPos());}
-            Result<double> getPosRad(){return fromIcs_toRad_Result(getPos());}
+            Result<float> getPosDeg(){return fromIcs_toDeg_Result(getPos());}
+            Result<float> getPosRad(){return fromIcs_toRad_Result(getPos());}
 
             //スピードとストレッチのget
             Result<int> getSpeed();
@@ -234,34 +252,43 @@ namespace servoICS {
             //オフセット
             Result<void> setOffset(long offsetIcs);
             Result<void> setOffsetIcs(long offsetIcs){return setOffset(offsetIcs);}
-            Result<void> setOffsetDeg(double offsetDeg){return setOffset(fromDeg_toIcs(offsetDeg));}
-            Result<void> setOffsetRad(double offsetRad){return setOffset(fromRad_toIcs(offsetRad));}
+            Result<void> setOffsetDeg(float offsetDeg){return setOffset(fromDeg_toIcs(offsetDeg));}
+            Result<void> setOffsetRad(float offsetRad){return setOffset(fromRad_toIcs(offsetRad));}
 
             Result<long> getOffset();
             Result<long> getOffsetIcs(){return getOffset();}
-            Result<double> getOffsetDeg(){return fromIcs_toDeg_Result(getOffset());}
-            Result<double> getOffsetRad(){return fromIcs_toRad_Result(getOffset());}
+            Result<float> getOffsetDeg(){return fromIcs_toDeg_Result(getOffset());}
+            Result<float> getOffsetRad(){return fromIcs_toRad_Result(getOffset());}
 
             //リミット設定
             Result<void> setMSMin(long minIcs);//movable scope可動範囲
             Result<void> setMSMinIcs(long minIcs){return setMSMin(minIcs);}
-            Result<void> setMSMinDeg(double minDeg){return setMSMin(fromDeg_toIcs(minDeg));}
-            Result<void> setMSMinRad(double minRad){return setMSMin(fromRad_toIcs(minRad));}
+            Result<void> setMSMinDeg(float minDeg){return setMSMin(fromDeg_toIcs(minDeg));}
+            Result<void> setMSMinRad(float minRad){return setMSMin(fromRad_toIcs(minRad));}
             
             Result<void> setMSMax(long maxIcs);
             Result<void> setMSMaxIcs(long maxIcs){return setMSMax(maxIcs);}
-            Result<void> setMSMaxDeg(double maxDeg){return setMSMax(fromDeg_toIcs(maxDeg));}
-            Result<void> setMSMaxRad(double maxRad){return setMSMax(fromRad_toIcs(maxRad));}
+            Result<void> setMSMaxDeg(float maxDeg){return setMSMax(fromDeg_toIcs(maxDeg));}
+            Result<void> setMSMaxRad(float maxRad){return setMSMax(fromRad_toIcs(maxRad));}
             
             Result<long> getMSMin();
             Result<long> getMSMinIcs(){return getMSMin();}
-            Result<double> getMSMinDeg(){return fromIcs_toDeg_Result(getMSMin());}
-            Result<double> getMSMinRad(){return fromIcs_toRad_Result(getMSMin());}
+            Result<float> getMSMinDeg(){return fromIcs_toDeg_Result(getMSMin());}
+            Result<float> getMSMinRad(){return fromIcs_toRad_Result(getMSMin());}
 
             Result<long> getMSMax();
             Result<long> getMSMaxIcs(){return getMSMax();}
-            Result<double> getMSMaxDeg(){return fromIcs_toDeg_Result(getMSMax());}
-            Result<double> getMSMaxRad(){return fromIcs_toRad_Result(getMSMax());}
+            Result<float> getMSMaxDeg(){return fromIcs_toDeg_Result(getMSMax());}
+            Result<float> getMSMaxRad(){return fromIcs_toRad_Result(getMSMax());}
+
+            //スキップ機能
+            void setSkip(bool isSkip);
+            bool getSkip(){return isSkip_;}
+
+            Result<void> returnStatus()const{return status;}
+
 
     };
 }
+
+#endif

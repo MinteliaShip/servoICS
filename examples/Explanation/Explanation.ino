@@ -37,10 +37,10 @@ void setup() {
   //角度指令の返事を受け取る。
 
   //度数法
-  double PosDeg = servo.setPos(0).getPosDeg().value;
+  float PosDeg = servo.setPos(0).getPosDeg().value;
 
   //弧度法
-  double PosRad = servo.setPos(0).getPosRad().value;
+  float PosRad = servo.setPos(0).getPosRad().value;
 
   //ICS角度
   long PosIcs = servo.setPos(0).getPos().value;
@@ -96,6 +96,40 @@ void setup() {
   int stretch = servo.getStretch();
   int speed = servo.getSpeed();
   
+  /****************************/
+  //本ライブラリで実装されているResult型について
+  //○Result型
+  // ・関数の成功/失敗を表すsuccess
+  // ・エラーメッセージを格納するerror_msg
+  // ・値を格納するvalue
+  //の3つのメンバを持つ構造体。
+
+  //ここのvalueは、場所によって型が異なる。
+  // ・getPos()のvalueはlong型
+  // ・getPosDeg()のvalueはfloat型
+  // ・getStretch()のvalueはint型
+  //などなど。
+
+  //Result型の値を取得するには、valueメンバを呼び出す。
+  // 例：getPos()の値を取得する場合
+  //long PosIcs = servo.getPos().value;
+  // 例：getPosDeg()の値を取得する場合
+  //float PosDeg = servo.getPosDeg().value;
+  // 例：getStretch()の値を取得する場合
+  //int stretch = servo.getStretch().value;
+
+  //また、場合によってはメンバを呼び出さずに、Result型の値を直接変数に代入することも可能。この場合自動でvalueメンバが呼び出される。
+  //int stretch = servo.getStretch();
+  //int stretch = servo.getStretch().value;
+
+  //処理が失敗しているか確認する場合は、successメンバを呼び出す。
+  // 例：getPos()の処理が成功しているか確認する場合
+  //if(servo.getPos().success){}
+
+  //エラーメッセージを確認する場合は、error_msgメンバを呼び出す。
+  // 例：getPos()のエラーメッセージを確認する場合
+  //const char* errorMessage = servo.getPos().error_msg;
+
   /****************************/
 }
 
