@@ -65,20 +65,21 @@ namespace servoICS {
 
         status.success = 1;
 
-        //オフセットを反映させる。
-        ics = ics + (offSet_ - 7500);
+        if(ics != 0){
+            ics = ics + (offSet_ - 7500);
 
-        //異常指令値をはじく。
-        if(ics > maxIcs_){
-            status.success = 0;
-            sprintf(error_str,"[E]setPos:上限maxIcs_より指令値icsの方が大きいです。ICS=%d Deg=%d \0",ics,(int)fromIcs_toDeg(ics));
-            status.error_msg = error_str;
-            return sub;
-        }else if((ics < minIcs_)&&(ics != 0)){
-            status.success = 0;
-            sprintf(error_str,"[E]setPos:下限minIcs_より指令値icsの方が小さいです。ICS=%d Deg=%d \0",ics,(int)fromIcs_toDeg(ics));
-            status.error_msg = error_str;
-            return sub;
+            //異常指令値をはじく。
+            if(ics > maxIcs_){
+                status.success = 0;
+                sprintf(error_str,"[E]setPos:上限maxIcs_より指令値icsの方が大きいです。ICS=%d Deg=%d \0",ics,(int)fromIcs_toDeg(ics));
+                status.error_msg = error_str;
+                return sub;
+            }else if((ics < minIcs_)&&(ics != 0)){
+                status.success = 0;
+                sprintf(error_str,"[E]setPos:下限minIcs_より指令値icsの方が小さいです。ICS=%d Deg=%d \0",ics,(int)fromIcs_toDeg(ics));
+                status.error_msg = error_str;
+                return sub;
+            }
         }
 
         unsigned char txByte[3];
