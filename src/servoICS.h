@@ -228,10 +228,10 @@ namespace servoICS {
             Result<void> attach(Stream* port,char enPin, uint8_t id);
 
             //setPos
-            SubGetPos& setPos(long ics);
-            SubGetPos& setPosIcs(long ics){return setPos(ics);}
-            SubGetPos& setPosDeg(float deg){return setPos(fromDeg_toIcs(deg));}
-            SubGetPos& setPosRad(float rad){return setPos(fromRad_toIcs(rad));}
+            SubGetPos& setPos(long ics,bool offsetEn = true);
+            SubGetPos& setPosIcs(long ics,bool offsetEn = true){return setPos(ics,offsetEn);}
+            SubGetPos& setPosDeg(float deg,bool offsetEn = true){return setPos(fromDeg_toIcs(deg),offsetEn);}
+            SubGetPos& setPosRad(float rad,bool offsetEn = true){return setPos(fromRad_toIcs(rad),offsetEn);}
             SubGetPos& setPosFree(){return setPos(0);}; 
 
             //スピードとストレッチのset

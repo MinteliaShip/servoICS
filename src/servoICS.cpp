@@ -50,7 +50,7 @@ namespace servoICS {
         return result;
     }
 
-    Servo::SubGetPos& Servo::setPos(long ics){
+    Servo::SubGetPos& Servo::setPos(long ics,bool offsetEn){
 
         //可変エラーメッセージ用の箱
         static char error_str[1024] = ""; 
@@ -66,7 +66,8 @@ namespace servoICS {
         status.success = 1;
 
         if(ics != 0){
-            ics = ics + (offSet_ - 7500);
+            //オフセット無効時には弾く。
+            if(offsetEn)ics = ics + (offSet_ - 7500);
 
             //異常指令値をはじく。
             if(ics > maxIcs_){
